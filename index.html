@@ -91,6 +91,7 @@
             z-index: 10;
             max-height: 100vh;
             overflow-y: auto;
+            overflow-x: hidden;
         }
 
         .screen.active {
@@ -370,10 +371,12 @@
 
         .room-code {
             font-family: var(--display);
-            font-size: clamp(1.8rem, 10vw, 4rem);
+            font-size: clamp(1.92rem, 9vw, 3.36rem);
             font-weight: 900;
             color: var(--amber);
-            letter-spacing: 0.22em;
+            letter-spacing: 0.18em;
+            /* compensate trailing letter-spacing so text is visually centred */
+            text-indent: 0.18em;
             text-shadow: 0 0 50px var(--amber-glow);
             transition: color 0.3s, text-shadow 0.3s;
             line-height: 1;
@@ -743,10 +746,84 @@
             background: #2a2a2a;
             border-radius: 4px;
         }
+
+        /* ── THEME TOGGLE BTN ───────────────────── */
+        #theme-btn {
+            position: fixed;
+            top: 14px;
+            right: 14px;
+            z-index: 100;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            cursor: pointer;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            transition: color 0.2s, border-color 0.2s, background 0.2s;
+        }
+
+        #theme-btn:hover {
+            color: var(--amber);
+            border-color: rgba(245, 158, 11, 0.35);
+        }
+
+        /* ── LIGHT THEME ────────────────────────── */
+        [data-theme="light"] {
+            --bg: #faf9f6;
+            --surface: #ffffff;
+            --surface2: #f0ede8;
+            --border: #e2ded7;
+            --amber: #d97706;
+            --amber-glow: rgba(217, 119, 6, 0.18);
+            --amber-dim: #92400e;
+            --green: #16a34a;
+            --green-glow: rgba(22, 163, 74, 0.18);
+            --red: #dc2626;
+            --text: #111111;
+            --text-dim: #9ca3af;
+        }
+
+        [data-theme="light"] body::after {
+            background-image:
+                linear-gradient(rgba(217, 119, 6, 0.06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(217, 119, 6, 0.06) 1px, transparent 1px);
+        }
+
+        [data-theme="light"] body::before {
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px,
+                    rgba(0, 0, 0, 0.015) 2px, rgba(0, 0, 0, 0.015) 4px);
+        }
+
+        [data-theme="light"] .back-btn:hover {
+            border-color: #d1cdc8;
+            color: var(--text);
+        }
+
+        [data-theme="light"] .no-talkers {
+            color: var(--text-dim);
+            border-color: var(--border);
+        }
+
+        [data-theme="light"] .code-input::placeholder {
+            color: var(--border);
+        }
+
+        [data-theme="light"] ::-webkit-scrollbar-thumb {
+            background: var(--border);
+        }
+
+        [data-theme="light"] .mic-ball {
+            box-shadow: 0 0 40px rgba(217, 119, 6, 0.06) inset;
+        }
     </style>
 </head>
 
 <body>
+
+    <!-- ── THEME TOGGLE ──────────────────────────────────────── -->
+    <button id="theme-btn" onclick="toggleTheme()" title="Toggle light / dark"></button>
 
     <!-- ══ HOME ═══════════════════════════════════════════════ -->
     <div id="home" class="screen active">
@@ -1208,6 +1285,8 @@
         function goLive(code) {
             document.getElementById('to-code').textContent = code;
             show('talker-active');
+            // Start muted — talker must actively choose to go live
+            toggleMute();
             history.replaceState(null, '', '?room=' + code);
         }
 
@@ -1252,6 +1331,29 @@
             el.textContent = msg;
             el.style.display = 'block';
         }
+
+            // ── THEME ───────────────────────────────────────────────────
+            const SUN_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>`;
+            const MOON_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>`;
+
+            function updateThemeBtn() {
+                const isLight = document.documentElement.dataset.theme === 'light';
+                document.getElementById('theme-btn').innerHTML = isLight ? MOON_SVG : SUN_SVG;
+            }
+
+            function toggleTheme() {
+                const isLight = document.documentElement.dataset.theme === 'light';
+                document.documentElement.dataset.theme = isLight ? '' : 'light';
+                localStorage.setItem('multitalk-theme', isLight ? '' : 'light');
+                updateThemeBtn();
+            }
+
+            // Restore saved theme on load
+            (function () {
+                const saved = localStorage.getItem('multitalk-theme');
+                if (saved) document.documentElement.dataset.theme = saved;
+                updateThemeBtn();
+            })();
 
         // ── URL PERSISTENCE ─────────────────────────────────────────
         // ?speaker=XXXXXX — resume as speaker · ?room=XXXXXX — auto-connect as talker
